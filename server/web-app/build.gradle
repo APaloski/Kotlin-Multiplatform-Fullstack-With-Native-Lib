@@ -1,0 +1,69 @@
+plugins {
+    id 'org.jetbrains.kotlin.js'
+}
+
+kotlin {
+    js {
+        browser()
+    }
+
+    sourceSets {
+        jsMain {
+            dependencies {
+                implementation project(":server:api-client")
+            }
+        }
+    }
+}
+
+
+configurations {
+    productionWebjar {
+        canBeResolved = true
+        canBeConsumed = true
+    }
+    developmentWebjar {
+        canBeResolved = true
+        canBeConsumed = true
+    }
+}
+
+browserProductionWebpack.configure {
+    destinationDirectory = file("${buildDir}/distributions/prod/")
+}
+
+browserDevelopmentWebpack.configure {
+    destinationDirectory = file("${buildDir}/distributions/dev/")
+}
+
+dependencies {
+    productionWebjar browserProductionWebpack.outputs.files
+    developmentWebjar browserDevelopmentWebpack.outputs.files
+}
+
+task productionWebjarJar(type : Jar) {
+    group "build"
+    archiveName "productionWebjar.jar"
+
+    from configurations.productionWebjar {
+        into "META-INF/resources/webjars/web-app/1.0.0/"
+        includeEmptyDirs = false
+        exclude "**/META-INF/*"
+    }
+}
+
+task developmentWebjarJar(type : Jar) {
+    group "build"
+    archiveName "developmentWebjar.jar"
+
+    from configurations.developmentWebjar {
+        into "META-INF/resources/webjars/web-app/1.0.0"
+        includeEmptyDirs = false
+        exclude "**/META-INF/*"
+    }
+}
+
+artifacts {
+    productionWebjar productionWebjarJar
+    developmentWebjar developmentWebjarJar
+}

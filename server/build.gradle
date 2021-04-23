@@ -1,0 +1,29 @@
+plugins {
+    id 'org.jetbrains.kotlin.jvm'
+    id 'application'
+}
+
+version 'unspecified'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation project(path: ":native-lib-wrapper", configuration: "windowsLib")
+    implementation "io.ktor:ktor-server-core:1.5.3"
+    implementation "io.ktor:ktor-server-netty:1.5.3"
+    implementation "io.ktor:ktor-webjars:1.5.3"
+    implementation "ch.qos.logback:logback-classic:1.2.3"
+
+    implementation project(path: ":server:web-app", configuration: "developmentWebjar")
+
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test-junit:1.4.32'
+    testImplementation 'io.ktor:ktor-client-apache:1.5.3'
+    testImplementation project(path: ":server:api-client")
+}
+
+application {
+    mainClass = 'io.ktor.server.netty.EngineMain'
+}

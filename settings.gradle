@@ -1,0 +1,6 @@
+rootProject.name = 'Multiplatform-it-all'
+
+include ':native-lib-wrapper'
+include ":server"
+include ":server:api-client"
+include ":server:web-app"

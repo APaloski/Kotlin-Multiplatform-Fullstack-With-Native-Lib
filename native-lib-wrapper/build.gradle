@@ -1,0 +1,131 @@
+plugins {
+    id 'org.jetbrains.kotlin.multiplatform'
+}
+
+
+repositories {
+    mavenCentral()
+
+
+    //For curl we use a custom ivy repo - see https://stackoverflow.com/questions/23023069/gradle-download-and-unzip-file-from-url/34327202#34327202
+    ivy {
+        url="https://curl.se/"
+        patternLayout {
+            artifact '[module]/dl-[revision]/[organization]-[revision]-[classifier].[ext]' //  above then: windows/dl-7.76.1/curl-7.76.1-win64-mingw.zip
+        }
+        metadataSources { artifact() }
+    }
+}
+
+configurations {
+    curl
+}
+
+dependencies {
+    curl "curl:windows:7.76.1:win64-mingw@zip"
+}
+
+def externalsBaseDir = "${buildDir}/externals/"
+def curlDir = "$externalsBaseDir/curl/"
+
+task unzipCurl {
+    doLast {
+        def tmpRenamefile = "${buildDir}/tmp/curl"
+        copy {
+            from zipTree(project.configurations.curl.first())
+            into tmpRenamefile
+        }
+        copy {
+            from file(tmpRenamefile).listFiles().first()
+            into curlDir
+        }
+        delete tmpRenamefile
+    }
+}
+
+kotlin {
+
+    mingwX64 {
+        binaries {
+            sharedLib() {
+                //Per https://stackoverflow.com/questions/25160245/clang-linking-with-a-so-file -L states "Look at this path for libraries", -l{name} says "Look for a library named lib{name}.a (or lib{name}.so)"
+                linkerOpts = ["-L$curlDir/lib".toString(), "-lcurl"]
+            }
+        }
+        compilations.main {
+            cinterops {
+                jni {
+                    packageName = 'io.paloski.jni'
+                    def javaHome = new File(System.getenv("JAVA_HOME") ?: System.getProperty("java.home"))
+                    includeDirs("$javaHome/include",
+                                "$javaHome/include/darwin",
+                                "$javaHome/include/linux",
+                                "$javaHome/include/win32")
+
+                }
+                curl {
+                    packageName = "lib.curl"
+                    includeDirs("$curlDir/include/curl")
+                }
+            }
+        }
+    }
+
+    jvm()
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation kotlin('stdlib-common')
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation kotlin('test-common')
+                implementation kotlin('test-annotations-common')
+            }
+        }
+
+        jvmTest {
+            resources.srcDir "${buildDir}/generated/jvmResources/"
+            dependencies {
+                implementation kotlin("test-junit")
+            }
+        }
+    }
+}
+
+cinteropCurlMingwX64.dependsOn unzipCurl
+
+configurations {
+    windowsLib {
+        canBeConsumed = true
+        canBeResolved = true
+        extendsFrom jvmImplementation
+    }
+}
+
+task copyDllsToResources(type: Copy) {
+    dependsOn(linkReleaseSharedMingwX64)
+    from(linkReleaseSharedMingwX64.outputs) {
+        include '*.dll'
+        into 'natives'
+    }
+    from(fileTree(curlDir).files) {
+        include '**/*.dll'
+        into 'natives'
+    }
+    into "${buildDir}/generated/jvmResources/"
+}
+jvmTestProcessResources.dependsOn(copyDllsToResources)
+
+task libJar(type: Jar) {
+    dependsOn(copyDllsToResources)
+    from(copyDllsToResources.outputs)
+    from(compileKotlinJvm.outputs)
+    archiveName 'windows.jar'
+}
+
+artifacts {
+    windowsLib(libJar)
+}
