@@ -2,20 +2,31 @@ plugins {
     id 'org.jetbrains.kotlin.js'
 }
 
+repositories {
+    maven {
+        url = "https://maven.pkg.jetbrains.space/kotlin/p/kotlin/kotlin-js-wrappers"
+    }
+    maven {
+        url = "https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven"
+    }
+}
+
 kotlin {
     js {
         browser()
     }
-
-    sourceSets {
-        jsMain {
-            dependencies {
-                implementation project(":server:api-client")
-            }
-        }
-    }
 }
 
+dependencies {
+    implementation project(":server:api-client")
+
+
+    implementation "org.jetbrains:kotlin-react:17.0.0-pre.129-kotlin-1.4.10"
+    implementation "org.jetbrains.kotlinx:kotlinx-html-js:0.7.2"
+    implementation "org.jetbrains:kotlin-styled:5.2.0-pre.129-kotlin-1.4.10"
+    implementation(npm("react", "16.13.1"))
+    implementation(npm("react-dom", "16.13.1"))
+}
 
 configurations {
     productionWebjar {
